@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 
 export async function POST(req: NextRequest) {
-  // Ensure the backend securely accesses process.env.GEMINI_API_KEY
+  // Graceful handling of missing API key with a 500 JSON error
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
@@ -20,47 +20,48 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Strip out base64 prefixes if present (e.g. "data:image/png;base64,")
-    let base64DataStringWithoutPrefix = image;
+    // Strip base64 metadata prefix if present so inlineData receives pure base64
+    let base64Data = image;
     if (image.includes(';base64,')) {
-      base64DataStringWithoutPrefix = image.split(';base64,')[1];
+      base64Data = image.split(';base64,')[1];
     }
 
-    // Initialize Google Gen AI client exactly as requested
+    // Official unified @google/genai library initialization
     const ai = new GoogleGenAI({ apiKey: apiKey });
 
-    const systemPrompt = `You are a smart, waste sorting and recycling assistant. Analyze the image of the household or holiday packaging waste provided.
-Identify the object, determine its recyclability status, list preparation instructions, and add an eco fact.
-You MUST format your output in clean, consistent Markdown using the following exact headers:
+    // Structured system prompt to enforce markdown formatting
+    const systemPrompt = `You are a strict, expert waste sorting assistant. Analyze the provided image of packaging waste.
+You MUST format your output exactly as clean, consistent Markdown using the following headers:
 
 # 📦 **Identified Object & Material**
-(Describe what the object is and identify its material, e.g., Plastic #2 HDPE, Corrugated Cardboard, Aluminum Can).
+(Identify the object and its material, e.g., Plastic #2 HDPE, Corrugated Cardboard).
 
 # ♻️ **Recyclability Status**
-(State clearly in bold: **YES**, **NO**, or **LOCAL RULES APPLY**. Provide a brief explanation of why).
+(State clearly in bold exactly one of: **YES**, **NO**, or **LOCAL RULES APPLY**. Explain briefly).
 
 # 🧼 **Preparation Steps**
-(Provide a numbered list of steps needed to prepare the item for disposal/recycling, e.g., Wash thoroughly, remove adhesive labels, flatten).
+(Provide a numbered list of steps to prepare the item, e.g., wash thoroughly, remove adhesive labels).
 
 # 🌍 **Eco Fact**
-(Provide a quick, motivating environmental fact about this specific material).`;
+(A quick, motivating environmental fact about this specific material).`;
 
-    // Call the ai.models.generateContent method passing the model 'gemini-3.5-flash'
+    // Target the fast gemini-3.5-flash model using inlineData schema
     const response = await ai.models.generateContent({
       model: 'gemini-3.5-flash',
       contents: [
         systemPrompt,
         {
           inlineData: {
-            data: base64DataStringWithoutPrefix,
+            data: base64Data,
             mimeType: mimeType
           }
         }
       ]
     });
 
-    const textResult = response.text || "Failed to analyze image.";
+    const textResult = response.text || "Failed to generate analysis.";
     return NextResponse.json({ result: textResult });
+    
   } catch (error: any) {
     console.error("API Error in analyze route:", error);
     return NextResponse.json(
