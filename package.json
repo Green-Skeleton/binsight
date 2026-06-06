@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@google/genai": "^2.8.0",
+    "autoprefixer": "^10.5.0",
     "lucide-react": "^1.17.0",
     "next": "16.2.7",
+    "postcss": "^8.5.15",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
@@ -23,7 +25,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
     "lightningcss-win32-x64-msvc": "^1.32.0",
-    "tailwindcss": "^4",
+    "tailwindcss": "^3.4.19",
     "typescript": "^5"
   }
 }
